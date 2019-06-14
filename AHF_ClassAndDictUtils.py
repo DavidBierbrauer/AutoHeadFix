@@ -117,15 +117,15 @@ def File_from_user (nameTypeStr, longName, typeSuffix, makeNew = False):
             else:
                 try:
                     moduleObj=__import__ (f.rstrip(typeSuffix))
-                    #print ('module=' + str (moduleObj))
+                    print ('module=' + str (moduleObj))
                     classObj = getattr(moduleObj, moduleObj.__name__)
-                    #print (classObj)
+                    print (classObj)
                     isAbstractClass = inspect.isabstract (classObj)
                     if isAbstractClass == False:
                         fileList.append (fname + ": " + classObj.about())
                         iFile += 1
-                    # else:
-                    #     print(classObj.__abstractmethods__)
+                    else:
+                        print(classObj.__abstractmethods__)
                 except Exception as e: # exception will be thrown if imported module imports non-existant modules, for instance
                     print (f, " : ", e)
                     continue
@@ -205,7 +205,7 @@ def Show_ordered_object (anObject, longName):
 
 
 def Edit_Obj_fields (anObject, longName):
-
+    changes = False
     while True:
         showDict = Show_ordered_object (anObject, longName)
         inputStr = input ('Enter number of setting to edit, or 0 to exit:')
@@ -217,6 +217,7 @@ def Edit_Obj_fields (anObject, longName):
         if inputNum == 0:
             break
         else:
+            changes = True
             itemDict = {}
             itemDict.update (showDict [inputNum -1]) #itemDict = OrderedDict.get (inputNum -1)
             kvp = itemDict.popitem()
@@ -280,7 +281,7 @@ def Edit_Obj_fields (anObject, longName):
             elif type (itemValue) is dict:
                 Edit_dict (itemValue, itemKey)
                 setattr (anObject, itemKey, itemValue)
-
+    return changes
 
 def Edit_dict (anyDict, longName):
     """
@@ -355,17 +356,22 @@ def File_to_dict (nameTypeStr, nameStr, typeSuffix, dir = ''):
     """
     Sets attributes for the object anObject from the keys and values of dictionay aDict loaded from the file
     """
-    filename = 'AHF_' + nameTypeStr + '_' + nameStr + typeSuffix
-    errFlag = False
-    with open (dir + filename, 'r') as fp:
-        data = fp.read()
-        data=data.replace('\n', ',')
-        data=data.replace('=', ':')
-        configDict = json.loads(data)
-        fp.close()
+    try:
+        filename = 'AHF_' + nameTypeStr + '_' + nameStr + typeSuffix
+        errFlag = False
+        with open (dir + filename, 'r') as fp:
+            data = fp.read()
+            data=data.replace('\n', ',')
+            data=data.replace('=', ':')
+            configDict = json.loads(data)
+            fp.close()
+    except FileNotFoundError as e:
+        raise e
     return configDict
 
-
+def Remove_file (nameTypeStr, nameStr, typeSuffix, dir = ''):
+    filename = 'AHF_' + nameTypeStr + '_' + nameStr + typeSuffix
+    os.remove(dir + filename)
 
 def Dict_to_file (anyDict, nameTypeStr, nameStr, typeSuffix, dir = ''):
     """

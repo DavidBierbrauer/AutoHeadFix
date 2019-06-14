@@ -3,7 +3,7 @@
 from os import path, makedirs, chown, listdir
 from pwd import getpwnam
 from grp import getgrnam
-from time import time, localtime,timezone
+from time import time, localtime,timezone, sleep
 from datetime import datetime
 import AHF_ClassAndDictUtils as CAD
 from AHF_DataLogger import AHF_DataLogger
@@ -74,6 +74,9 @@ class AHF_DataLogger_text (AHF_DataLogger):
         self.dataPath = self.settingsDict.get('dataPath')
         self.configPath = self.settingsDict.get('mouseConfigPath')
         self.logFP = None # reference to log file that will be created
+        self.dataPath = self.settingsDict.get('dataPath')
+        self.configPath = self.settingsDict.get('mouseConfigPath')
+        self.logFP = None # reference to log file that will be created
         self.logPath = self.dataPath + 'LogFiles/' # path to the folder containing log files
         self.logFilePath = '' # path to the log file
         self.statsPath = self.dataPath + 'QuickStats/'
@@ -133,13 +136,25 @@ class AHF_DataLogger_text (AHF_DataLogger):
         return CAD.File_to_dict ('mouse', '{:013}'.format(tag), '.jsn', dir = self.configPath)
 
 
-    def storeConfig (self, tag, configDict):
+    def storeConfig (self, tag, configDict, source = ""):
         """
         saves data to corresponding json text file, overwriting old file
         """
         CAD.Dict_to_file (configDict, 'mouse', '{:013}'.format(tag), '.jsn', dir = self.configPath)
 
+    def saveNewMouse (self, tag, note, dictionary = {}):
+        self.storeConfig(tag, dictionary)
+        self.writeToLogFile(tag, "NewMouse", dictionary, time())
 
+    def getMice (self):
+        mice = []
+        for config in self.configGenerator():
+            mice.append(config[0])
+        return mice
+
+    def retireMouse (self, tag, reason):
+        CAD.Remove_file('mouse', '{:013}'.format(tag), '.jsn', dir = self.configPath)
+        self.writeToLogFile(tag, "Retirement", {'reason': reason}, time())
 
     def newDay (self, mice):
         self.writeToLogFile (0, 'SeshEnd', None, time())
@@ -161,8 +176,10 @@ class AHF_DataLogger_text (AHF_DataLogger):
         except Exception as e:
                 print ("Error maing log file\n", str(e))
 
+    def readFromLogFile(self, tag, index):
+        pass
 
-    def writeToLogFile(self, tag, eventKind, eventDict, timeStamp):
+    def writeToLogFile(self, tag, eventKind, eventDict, timeStamp, toShellOrFile=3):
         """
         Writes the time and type of each event to a text log file, and also to the shell
 
@@ -217,11 +234,6 @@ class AHF_DataLogger_text (AHF_DataLogger):
             uid = getpwnam ('pi').pw_uid
             gid = getgrnam ('pi').gr_gid
             chown (self.statsFilePath, uid, gid)
-<<<<<<< Updated upstream
-
-=======
-                        
->>>>>>> Stashed changes
 
     def __del__ (self):
         self.writeToLogFile (0, 'SeshEnd', None, time())

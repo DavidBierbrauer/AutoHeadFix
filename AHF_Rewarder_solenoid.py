@@ -4,6 +4,7 @@
 from abc import ABCMeta, abstractmethod
 from AHF_Rewarder import AHF_Rewarder
 from time import sleep, time
+from collections import deque
 
 class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
     """
@@ -45,6 +46,31 @@ class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
         return AHF_Rewarder.config_user_get (starterDict)
 
 
+    def config_user_subject_get(self,starterDict = {}):
+        entrySize = starterDict.get('entrySize', AHF_Rewarder_solenoid.defaultEntry)
+        response = input(
+            'Enter the valve opening duration, in seconds, for entry rewards. Currently {:.2f}: '.format(entrySize))
+        if response != '':
+            entrySize = float(response)
+        starterDict.update({'entrySize': entrySize})
+        taskSize = starterDict.get('taskSize', AHF_Rewarder_solenoid.defaultTask)
+        response = input(
+            'Enter the valve opening duration, in seconds, for task rewards. Currently {:.2f}: '.format(taskSize))
+        if response != '':
+            taskSize = float(response)
+        starterDict.update({'taskSize': taskSize})
+        return starterDict
+
+    def config_subject_get(self, starterDict={}):
+        entrySize = starterDict.get('entrySize', AHF_Rewarder_solenoid.defaultEntry)
+        starterDict.update({'entrySize': entrySize})
+        taskSize = starterDict.get('taskSize', AHF_Rewarder_solenoid.defaultTask)
+        starterDict.update({'taskSize': taskSize})
+        return starterDict
+
+    def results_subject_get (self):
+        return self.results
+
     @abstractmethod
     def setup (self):
         self.rewardPin = self.settingsDict.get('rewardPin')
@@ -52,6 +78,8 @@ class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
         self.countermandTime = self.settingsDict.get ('entryRewardDelay')
         self.maxEntryRewards = self.settingsDict.get ('maxEntryRewards')
         self.countermanded = ''
+        self.results = deque(maxlen=25)
+        self.task.DataLogger.startTracking("Reward", "consumed", "buffer", size=200)
 
     def newResultsDict (self):
         """
@@ -81,12 +109,13 @@ class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
         if rewardName is 'entry' and resultsDict.get ('entry', 0) > settingsDict.get ('maxEntryRewards', self.maxEntryRewards):
             return 0
         else:
-            sleepTime =settingsDict.get(rewardName, self.rewards.get (rewardName, 0))
+            sleepTime =settingsDict.get(rewardName, self.task.Subjects.get(self.task.tag).get("Rewarder").get(rewardName + "Size"))
             if sleepTime ==0:
                 return 0
             else:
                 resultsDict.update ({rewardName: resultsDict.get (rewardName, 0) + 1})
-                self.task.DataLogger.writeToLogFile(self.task.tag, 'Reward', {'kind' : rewardName, 'size' : sleepTime}, time())
+                self.task.DataLogger.writeToLogFile(self.task.tag, 'Reward', {'kind' : rewardName, 'size' : sleepTime, 'consumed': False}, time())
+                print("Rewards so far: ", self.task.DataLogger.getTrackedEvent(self.task.tag, "Reward", "consumed"))
                 self.threadReward (sleepTime)
                 return sleepTime
 
@@ -98,7 +127,7 @@ class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
         if rewardName is 'entry' and resultsDict.get ('entry', 0) > settingsDict.get ('maxEntryRewards', self.maxEntryRewards):
             return 0
         else:
-            sleepTime =settingsDict.get(rewardName, self.rewards.get (rewardName, 0))
+            sleepTime =settingsDict.get(rewardName, self.task.Subjects.get(self.task.tag).get("Rewarder").get(rewardName + "Size"))
             if sleepTime ==0:
                 return 0
             else:
@@ -127,4 +156,3 @@ class AHF_Rewarder_solenoid (AHF_Rewarder,metaclass = ABCMeta):
     @abstractmethod
     def threadCountermand (self):
         pass
-

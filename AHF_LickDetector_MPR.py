@@ -22,8 +22,8 @@ class AHF_LickDetector_MPR (AHF_LickDetector):
         custom callback using global task reference from AHF_Task
         """
         AHF_Task.gTask.DataLogger.writeToLogFile(AHF_Task.gTask.tag, 'lick', {'chan' : touchedChannel}, time())
-        newVal = AHF_Task.gTask.Subjects.get(AHF_Task.gTask.tag).get('resultsDict').get('LickDetector', {}).get('licks', 0) + 1
-        AHF_Task.gTask.Subjects.get(AHF_Task.gTask.tag).get('resultsDict').get('LickDetector').update ({'licks' : newVal})
+        #newVal = AHF_Task.gTask.Subjects.get(AHF_Task.gTask.tag).get('resultsDict').get('LickDetector', {}).get('licks', 0) + 1
+        #AHF_Task.gTask.Subjects.get(AHF_Task.gTask.tag).get('resultsDict').get('LickDetector').update ({'licks' : newVal})
 
 
     @staticmethod
@@ -105,6 +105,18 @@ class AHF_LickDetector_MPR (AHF_LickDetector):
         Use it to count licks, by zeroing selected channels, then checking the values in the array
         """
         self.touchDetector.startCount()
+
+    def resumeLickCount (self):
+        """
+        Continue the lick counting without zeroing the channels
+        """
+        self.touchDetector.resumeCount()
+
+    def getLickCount (self):
+        """
+        Get the number of licks for each channel in the global array without stopping the count.
+        """
+        return self.touchDetector.getCount()
 
 
     def stopLickCount (self, chanList):
